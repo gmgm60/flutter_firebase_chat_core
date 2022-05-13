@@ -4,7 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'firebase_chat_core_config.dart';
 import 'util.dart';
-
+//custom user uid
+class MyUser {
+  String uid;
+  MyUser({required this.uid});
+}
 /// Provides access to Firebase chat data. Singleton, use
 /// FirebaseChatCore.instance to aceess methods.
 class FirebaseChatCore {
@@ -100,9 +104,16 @@ class FirebaseChatCore {
     types.User otherUser, {
     Map<String, dynamic>? metadata,
   }) async {
-    final fu = firebaseUser;
+    dynamic fu;// = firebaseUser;
 
-    if (fu == null) return Future.error('User does not exist');
+    if (firebaseUser == null) return Future.error('User does not exist');
+    String? userRole = (await firebaseUser?.getIdTokenResult())?.claims?['role'] as String? ;
+    if(userRole == "admin" ||userRole == "support" || userRole == "moderator"){
+      fu = MyUser(uid: 'uid');
+    }else{
+      fu = firebaseUser;
+    }
+
 
     final query = await getFirebaseFirestore()
         .collection(config.roomsCollectionName)
