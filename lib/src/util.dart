@@ -28,7 +28,7 @@ Future<Map<String, dynamic>> fetchUser(
   final doc = await instance.collection(usersCollectionName).doc(userId).get();
 
   final data = doc.data()!;
-
+ print("data: $data");
   data['createdAt'] = data['createdAt']?.millisecondsSinceEpoch;
   data['id'] = doc.id;
   data['lastSeen'] = data['lastSeen']?.millisecondsSinceEpoch;
@@ -38,20 +38,39 @@ Future<Map<String, dynamic>> fetchUser(
   return data;
 }
 
+// custom user
+class MyUser {
+  String uid;
+  String role;
+
+  MyUser({required this.uid, this.role = "user"});
+
+  bool isSupport() {
+    if (role == "admin" || role == "support" || role == "moderator") {
+      return true;
+    }
+    return false;
+  }
+  @override
+  String toString() {
+    return "MyUser(uid:$uid,role:$role)";
+  }
+}
+
 /// Returns a list of [types.Room] created from Firebase query.
 /// If room has 2 participants, sets correct room name and image.
 Future<List<types.Room>> processRoomsQuery(
-  User firebaseUser,
+  MyUser firebaseUser,
   FirebaseFirestore instance,
   QuerySnapshot<Map<String, dynamic>> query,
-  String usersCollectionName,
+  String usersCollectionName,{bool isSupport= false}
 ) async {
   final futures = query.docs.map(
     (doc) => processRoomDocument(
       doc,
       firebaseUser,
       instance,
-      usersCollectionName,
+      usersCollectionName,isSupport: isSupport
     ),
   );
 
@@ -61,10 +80,10 @@ Future<List<types.Room>> processRoomsQuery(
 /// Returns a [types.Room] created from Firebase document
 Future<types.Room> processRoomDocument(
   DocumentSnapshot<Map<String, dynamic>> doc,
-  User firebaseUser,
+  MyUser firebaseUser,
   FirebaseFirestore instance,
-  String usersCollectionName,
-) async {
+  String usersCollectionName, {bool isSupport = false}
+    ) async {
   final data = doc.data()!;
 
   data['createdAt'] = data['createdAt']?.millisecondsSinceEpoch;
@@ -126,4 +145,16 @@ Future<types.Room> processRoomDocument(
   }
 
   return types.Room.fromJson(data);
+}
+
+extension GetMyUser on User {
+  Future<MyUser> toMyUser() async {
+    String? userRole = (await getIdTokenResult()).claims?['role'] as String?;
+    if (userRole == "admin" ||
+        userRole == "support" ||
+        userRole == "moderator") {
+      return MyUser(uid: uid, role: "support");
+    }
+    return MyUser(uid: uid);
+  }
 }
