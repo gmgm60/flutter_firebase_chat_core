@@ -27,8 +27,16 @@ Future<Map<String, dynamic>> fetchUser(
 }) async {
   final doc = await instance.collection(usersCollectionName).doc(userId).get();
 
-  final data = doc.data()!;
- print("data: $data");
+  final data = doc.data() ?? {};
+
+  if(doc.data() == null){
+    return {
+      "id": doc.id,
+      "firstName":"Not Found"
+    };
+  }
+
+ //print("data: $data");
   data['createdAt'] = data['createdAt']?.millisecondsSinceEpoch;
   data['id'] = doc.id;
   data['lastSeen'] = data['lastSeen']?.millisecondsSinceEpoch;
@@ -117,8 +125,8 @@ Future<types.Room> processRoomDocument(
       name = '${otherUser['firstName'] ?? ''} ${otherUser['lastName'] ?? ''}'
           .trim();
     } catch (e) {
-      // Do nothing if other user is not found, because he should be found.
-      // Consider falling back to some default values.
+      //imageUrl = "";
+      name = "Deleted User";
     }
   }
 

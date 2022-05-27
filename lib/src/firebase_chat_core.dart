@@ -312,8 +312,8 @@ class FirebaseChatCore {
     } else {
       userId = firebaseUser!.uid;
     }
-    print("fu for rooms is $fu");
-    print("firebaseUser for rooms is $firebaseUser");
+    // print("fu for rooms is $fu");
+    // print("firebaseUser for rooms is $firebaseUser");
     final collection = orderByUpdatedAt
         ? getFirebaseFirestore()
         .collection(config.roomsCollectionName)
