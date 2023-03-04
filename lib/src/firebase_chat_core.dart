@@ -338,11 +338,11 @@ class FirebaseChatCore {
   /// room ID. If arbitraty data is provided in the [partialMessage]
   /// does nothing.
   void sendMessage(dynamic partialMessage, String roomId,
-      {bool isSupport = false, required String userName,required List<String> sendTo}) async {
+      {bool isSupport = false, required String userName,required List<String> sendTo,bool autoReply = false}) async {
     MyUser? fu = firebaseUser;
     String userId = "";
     if (fu == null) return;
-    if (isSupport == true && fu.isSupport()) {
+    if ((isSupport == true && fu.isSupport()) || autoReply) {
       userId = "support";
     } else {
       userId = firebaseUser!.uid;
