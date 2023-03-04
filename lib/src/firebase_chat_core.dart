@@ -8,11 +8,11 @@ import 'util.dart';
 /// Provides access to Firebase chat data. Singleton, use
 /// FirebaseChatCore.instance to aceess methods.
 class FirebaseChatCore {
-
   /// Current logged in user in Firebase. Does not update automatically.
   /// Use [FirebaseAuth.authStateChanges] to listen to the state changes.
-  MyUser? firebaseUser = FirebaseAuth.instance.currentUser != null ?
-  MyUser(uid: FirebaseAuth.instance.currentUser!.uid) : null;
+  MyUser? firebaseUser = FirebaseAuth.instance.currentUser != null
+      ? MyUser(uid: FirebaseAuth.instance.currentUser!.uid)
+      : null;
 
   FirebaseChatCore._privateConstructor() {
     FirebaseAuth.instance.currentUser
@@ -32,23 +32,23 @@ class FirebaseChatCore {
     'users',
   );
 
-  Future<void>Function({
-  required String roomId,
-  required String message,
-  required String userName,
-  required List<String> sendTo,
+  Future<void> Function({
+    required String roomId,
+    required String message,
+    required String userName,
+    required List<String> sendTo,
   })? onSendMessage;
 
   /// Singleton instance
   static final FirebaseChatCore instance =
-  FirebaseChatCore._privateConstructor();
+      FirebaseChatCore._privateConstructor();
 
   /// Gets proper [FirebaseFirestore] instance
   FirebaseFirestore getFirebaseFirestore() {
     return config.firebaseAppName != null
         ? FirebaseFirestore.instanceFor(
-      app: Firebase.app(config.firebaseAppName!),
-    )
+            app: Firebase.app(config.firebaseAppName!),
+          )
         : FirebaseFirestore.instance;
   }
 
@@ -90,8 +90,7 @@ class FirebaseChatCore {
       'userIds': roomUsers.map((u) => u.id).toList(),
       'userRoles': roomUsers.fold<Map<String, String?>>(
         {},
-            (previousValue, user) =>
-        {
+        (previousValue, user) => {
           ...previousValue,
           user.id: user.role?.toShortString(),
         },
@@ -110,10 +109,8 @@ class FirebaseChatCore {
 
   /// Creates a direct chat for 2 people. Add [metadata] for any additional
   /// custom data.
-  Future<types.Room> createRoom(types.User otherUser, {
-    Map<String, dynamic>? metadata,
-    bool isSupport = false
-  }) async {
+  Future<types.Room> createRoom(types.User otherUser,
+      {Map<String, dynamic>? metadata, bool isSupport = false}) async {
     MyUser? fu = firebaseUser;
 
     if (fu == null) return await Future.error('User does not exist');
@@ -161,8 +158,7 @@ class FirebaseChatCore {
       'name': null,
       'type': types.RoomType.direct.toShortString(),
       'updatedAt': FieldValue.serverTimestamp(),
-      'userIds': users.map((u) => u.id).toList()
-        ..sort(),
+      'userIds': users.map((u) => u.id).toList()..sort(),
       'userRoles': null,
     });
 
@@ -217,7 +213,8 @@ class FirebaseChatCore {
   }
 
   /// Returns a stream of messages from Firebase for a given room
-  Stream<List<types.Message>> messages(types.Room room, {
+  Stream<List<types.Message>> messages(
+    types.Room room, {
     List<Object?>? endAt,
     List<Object?>? endBefore,
     int? limit,
@@ -249,13 +246,13 @@ class FirebaseChatCore {
     }
 
     return query.snapshots().map(
-          (snapshot) {
+      (snapshot) {
         return snapshot.docs.fold<List<types.Message>>(
           [],
-              (previousValue, doc) {
+          (previousValue, doc) {
             final data = doc.data();
             final author = room.users.firstWhere(
-                  (u) => u.id == data['authorId'],
+              (u) => u.id == data['authorId'],
               orElse: () => types.User(id: data['authorId'] as String),
             );
 
@@ -281,14 +278,13 @@ class FirebaseChatCore {
         .doc(roomId)
         .snapshots()
         .asyncMap(
-          (doc) =>
-          processRoomDocument(
+          (doc) => processRoomDocument(
             doc,
             fu,
             getFirebaseFirestore(),
             config.usersCollectionName,
           ),
-    );
+        );
   }
 
   /// Returns a stream of rooms from Firebase. Only rooms where current
@@ -316,29 +312,28 @@ class FirebaseChatCore {
     // print("firebaseUser for rooms is $firebaseUser");
     final collection = orderByUpdatedAt
         ? getFirebaseFirestore()
-        .collection(config.roomsCollectionName)
-        .where('userIds', arrayContains: userId)
-        .orderBy('updatedAt', descending: true)
+            .collection(config.roomsCollectionName)
+            .where('userIds', arrayContains: userId)
+            .orderBy('updatedAt', descending: true)
         : getFirebaseFirestore()
-        .collection(config.roomsCollectionName)
-        .where('userIds', arrayContains: userId);
+            .collection(config.roomsCollectionName)
+            .where('userIds', arrayContains: userId);
 
     return collection.snapshots().asyncMap(
-          (query) =>
-          processRoomsQuery(
-              MyUser(uid: userId),
-              getFirebaseFirestore(),
-              query,
-              config.usersCollectionName, isSupport: isSupport
-          ),
-    );
+          (query) => processRoomsQuery(MyUser(uid: userId),
+              getFirebaseFirestore(), query, config.usersCollectionName,
+              isSupport: isSupport),
+        );
   }
 
   /// Sends a message to the Firestore. Accepts any partial message and a
   /// room ID. If arbitraty data is provided in the [partialMessage]
   /// does nothing.
   void sendMessage(dynamic partialMessage, String roomId,
-      {bool isSupport = false, required String userName,required List<String> sendTo,bool autoReply = false}) async {
+      {bool isSupport = false,
+      required String userName,
+      required List<String> sendTo,
+      bool autoReply = false}) async {
     MyUser? fu = firebaseUser;
     String userId = "";
     if (fu == null) return;
@@ -391,13 +386,16 @@ class FirebaseChatCore {
       await getFirebaseFirestore()
           .collection('${config.roomsCollectionName}/$roomId/messages')
           .add(messageMap);
-      await getFirebaseFirestore().collection(config.roomsCollectionName).doc(roomId).update(
-          {"updatedAt":FieldValue.serverTimestamp()});
-      if (onSendMessage != null) {
-        await onSendMessage!(roomId: roomId,
+      await getFirebaseFirestore()
+          .collection(config.roomsCollectionName)
+          .doc(roomId)
+          .update({"updatedAt": FieldValue.serverTimestamp()});
+      if (onSendMessage != null && !autoReply) {
+        await onSendMessage!(
+          roomId: roomId,
           message: messageText ?? "",
           userName: userName,
-          sendTo :sendTo,
+          sendTo: sendTo,
         );
       }
     }
@@ -411,8 +409,7 @@ class FirebaseChatCore {
 
     final messageMap = message.toJson();
     messageMap.removeWhere(
-            (key, value) =>
-        key == 'author' || key == 'createdAt' || key == 'id');
+        (key, value) => key == 'author' || key == 'createdAt' || key == 'id');
     messageMap['authorId'] = message.author.id;
     messageMap['updatedAt'] = FieldValue.serverTimestamp();
 
@@ -429,7 +426,7 @@ class FirebaseChatCore {
 
     final roomMap = room.toJson();
     roomMap.removeWhere((key, value) =>
-    key == 'createdAt' ||
+        key == 'createdAt' ||
         key == 'id' ||
         key == 'lastMessages' ||
         key == 'users');
@@ -443,7 +440,7 @@ class FirebaseChatCore {
       final messageMap = m.toJson();
 
       messageMap.removeWhere((key, value) =>
-      key == 'author' ||
+          key == 'author' ||
           key == 'createdAt' ||
           key == 'id' ||
           key == 'updatedAt');
@@ -468,10 +465,9 @@ class FirebaseChatCore {
         .collection(config.usersCollectionName)
         .snapshots()
         .map(
-          (snapshot) =>
-          snapshot.docs.fold<List<types.User>>(
+          (snapshot) => snapshot.docs.fold<List<types.User>>(
             [],
-                (previousValue, doc) {
+            (previousValue, doc) {
               if (firebaseUser!.uid == doc.id) return previousValue;
 
               final data = doc.data();
@@ -484,6 +480,6 @@ class FirebaseChatCore {
               return [...previousValue, types.User.fromJson(data)];
             },
           ),
-    );
+        );
   }
 }
